@@ -1,12 +1,87 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Optional, List
+from datetime import datetime, date
+from decimal import Decimal
 
+
+# ===== REQUÊTES =====
 
 class ReclamationCreate(BaseModel):
     nom: str
     prenom: str
     telephone: str
-    email: str
+    email: Optional[str] = None
     numero_commande: str
-    articles: list[str]
-    quantites: list[int]
+    articles: List[str] = []
+    quantites: List[int] = []
+    description: str = Field(..., min_length=10)
+
+
+# ===== RÉPONSES =====
+
+class ReclamationResponse(BaseModel):
+    id_reclamation: int
+    statut_reclamation: str
+    classification_detectee: str
+    priorite_detectee: str
+    score_confiance: float
+    est_complexe: bool
+    service_destinataire: str
+    message: str
+
+    class Config:
+        from_attributes = True
+
+
+class ClientResponse(BaseModel):
+    id_client: int
+    nom: str
+    prenom: str
+    telephone: str
+    email: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class ReclamationDetail(BaseModel):
+    id_reclamation: int
+    id_commande: int
     description: str
+    statut_reclamation: str
+    classification_detectee: str
+    priorite_detectee: str
+    score_priorite: int
+    score_confiance: float
+    est_complexe: bool
+    service_destinataire: Optional[str]
+    date_creation: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationResponse(BaseModel):
+    id_notification: int
+    message: str
+    type_notification: str
+    date_envoi: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MatchingResult(BaseModel):
+    trouve: bool
+    id_commande: Optional[int] = None
+    id_client: Optional[int] = None
+    message: str
+
+
+class DashboardStats(BaseModel):
+    total_reclamations: int
+    en_attente: int
+    en_traitement: int
+    resolues: int
+    par_categorie: dict
+    par_priorite: dict
