@@ -12,8 +12,8 @@ class ReclamationCreate(BaseModel):
     telephone: str
     email: Optional[str] = None
     numero_commande: str
-    articles: List[str] = []
-    quantites: List[int] = []
+    articles: List[str] = Field(default_factory=list)
+    quantites: List[int] = Field(default_factory=list)
     description: str = Field(..., min_length=10)
 
 

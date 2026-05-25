@@ -31,7 +31,7 @@ class Commande(Base):
     __tablename__ = "commande"
     id_commande = Column(Integer, primary_key=True, index=True)
     numero_commande = Column(String(50), nullable=False, unique=True)
-    id_client = Column(Integer, ForeignKey("client.id_client"))
+    id_client = Column(Integer, ForeignKey("client.id_client"), nullable=False)
     date_commande = Column(Date, nullable=False)
     statut_commande = Column(String(50), default="en_preparation")
     montant_total = Column(DECIMAL(10, 2), default=0)
@@ -45,8 +45,8 @@ class Commande(Base):
 class LigneCommande(Base):
     __tablename__ = "ligne_commande"
     id_ligne = Column(Integer, primary_key=True, index=True)
-    id_commande = Column(Integer, ForeignKey("commande.id_commande"))
-    id_article = Column(Integer, ForeignKey("article.id_article"))
+    id_commande = Column(Integer, ForeignKey("commande.id_commande"), nullable=False)
+    id_article = Column(Integer, ForeignKey("article.id_article"), nullable=False)
     quantite = Column(Integer, default=1)
 
     commande = relationship("Commande", back_populates="lignes")
@@ -56,7 +56,7 @@ class LigneCommande(Base):
 class Livraison(Base):
     __tablename__ = "livraison"
     id_livraison = Column(Integer, primary_key=True, index=True)
-    id_commande = Column(Integer, ForeignKey("commande.id_commande"))
+    id_commande = Column(Integer, ForeignKey("commande.id_commande"), nullable=False)
     numero_suivi = Column(String(100), unique=True, nullable=False)
     statut_livraison = Column(String(50), default="en_preparation")
     transporteur = Column(String(100))
@@ -98,7 +98,7 @@ class Service(Base):
 class Agent(Base):
     __tablename__ = "agent"
     id_agent = Column(Integer, primary_key=True, index=True)
-    id_service = Column(Integer, ForeignKey("service.id_service"))
+    id_service = Column(Integer, ForeignKey("service.id_service"), nullable=False)
     nom = Column(String(100), nullable=False)
     prenom = Column(String(100), nullable=False)
     email = Column(String(150), unique=True)
@@ -111,8 +111,8 @@ class Agent(Base):
 class Notification(Base):
     __tablename__ = "notification"
     id_notification = Column(Integer, primary_key=True, index=True)
-    id_client = Column(Integer, ForeignKey("client.id_client"))
-    id_reclamation = Column(Integer, ForeignKey("reclamation.id_reclamation"))
+    id_client = Column(Integer, ForeignKey("client.id_client"), nullable=False)
+    id_reclamation = Column(Integer, ForeignKey("reclamation.id_reclamation"), nullable=False)
     message = Column(Text, nullable=False)
     type_notification = Column(String(50), default="information")
     date_envoi = Column(DateTime(timezone=True), server_default=func.now())
@@ -121,8 +121,21 @@ class Notification(Base):
 class HistoriqueStatut(Base):
     __tablename__ = "historique_statut"
     id_historique = Column(Integer, primary_key=True, index=True)
-    id_reclamation = Column(Integer, ForeignKey("reclamation.id_reclamation"))
+    id_reclamation = Column(Integer, ForeignKey("reclamation.id_reclamation"), nullable=False)
     ancien_statut = Column(String(100))
     nouveau_statut = Column(String(100))
     commentaire = Column(Text)
     date_changement = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class AffectationReclamation(Base):
+    __tablename__ = "affectation_reclamation"
+    id_affectation = Column(Integer, primary_key=True, index=True)
+    id_reclamation = Column(Integer, ForeignKey("reclamation.id_reclamation"), nullable=False)
+    id_agent = Column(Integer, ForeignKey("agent.id_agent"), nullable=False)
+    date_affectation = Column(DateTime(timezone=True), server_default=func.now())
+    statut_affectation = Column(String(50), default="affectee")
+    commentaire = Column(Text)
+
+    reclamation = relationship("Reclamation")
+    agent = relationship("Agent")
