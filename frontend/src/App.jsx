@@ -6,6 +6,7 @@ import SubmitReclamation from './pages/SubmitReclamation';
 import TrackReclamation from './pages/TrackReclamation';
 import Dashboard from './pages/Dashboard';
 import ServiceDashboard from './pages/ServiceDashboard';
+import AgentReclamations from './pages/AgentReclamations';
 import './App.css';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
         <Route path="/soumettre" element={<SubmitReclamation />} />
         <Route path="/suivi" element={<TrackReclamation />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/agent" element={<AgentReclamations />} />
         <Route path="/service/:nomService" element={<ServiceDashboard />} />
       </Routes>
     </BrowserRouter>

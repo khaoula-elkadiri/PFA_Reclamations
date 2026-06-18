@@ -44,6 +44,13 @@ class ClientResponse(BaseModel):
         from_attributes = True
 
 
+class ClientInfo(BaseModel):
+    nom: str
+    prenom: str
+    email: Optional[str]
+    telephone: str
+
+
 class ReclamationDetail(BaseModel):
     id_reclamation: int
     id_commande: int
@@ -59,6 +66,22 @@ class ReclamationDetail(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ReclamationAffecteeAgentResponse(BaseModel):
+    id_affectation: int
+    statut_affectation: str
+    commentaire_affectation: Optional[str]
+    id_reclamation: int
+    description: str
+    statut_reclamation: str
+    classification_detectee: str
+    priorite_detectee: str
+    score_confiance: float
+    est_complexe: bool
+    service_destinataire: Optional[str]
+    date_creation: datetime
+    client: Optional[ClientInfo]
 
 
 class NotificationResponse(BaseModel):

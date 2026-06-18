@@ -5,7 +5,7 @@ export default function HomePage() {
   return (
     <div className="container">
       <div className="hero">
-        <h1>🎯 Système Intelligent de Gestion des Réclamations</h1>
+        <h1>Système Intelligent de Gestion des Réclamations</h1>
         <p>Recherchez votre commande, suivez son statut, et déposez une réclamation si nécessaire. Notre IA traite automatiquement votre demande.</p>
       </div>
       
@@ -34,15 +34,15 @@ export default function HomePage() {
 
       <div className="info-cards">
         <div className="info-card">
-          <h3>🤖 Intelligence Artificielle</h3>
+          <h3>Intelligence Artificielle</h3>
           <p>Votre réclamation est analysée automatiquement par notre IA pour un traitement rapide.</p>
         </div>
         <div className="info-card">
-          <h3>⚡ Traitement rapide</h3>
+          <h3>Traitement rapide</h3>
           <p>La réclamation est routée directement vers le bon service.</p>
         </div>
         <div className="info-card">
-          <h3>🔔 Notifications</h3>
+          <h3>Notifications</h3>
           <p>Recevez des mises à jour à chaque étape du traitement.</p>
         </div>
       </div>

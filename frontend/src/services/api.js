@@ -48,6 +48,14 @@ export const notificationService = {
     return response.data;
   }
 };
+
+export const agentService = {
+  getReclamations: async (idAgent) => {
+    const response = await api.get(`/agents/${idAgent}/reclamations`);
+    return response.data;
+  }
+};
+
 export const commandeService = {
   rechercher: async (numeroCommande) => {
     const response = await api.get(`/commande/rechercher/${numeroCommande}`);

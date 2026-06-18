@@ -1,14 +1,50 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { commandeService } from '../services/api';
 import { Search, Package, Calendar, Truck, MapPin, AlertCircle } from 'lucide-react';
 
 export default function SearchOrder() {
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [numeroCommande, setNumeroCommande] = useState('');
   const [commande, setCommande] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const commandeDepuisState = location.state?.commande;
+    const numeroDepuisUrl = searchParams.get('numero');
+
+    const timer = setTimeout(async () => {
+      if (commandeDepuisState) {
+        setCommande(commandeDepuisState);
+        setNumeroCommande(commandeDepuisState.numero_commande || numeroDepuisUrl || '');
+        setError(null);
+        return;
+      }
+
+      if (!numeroDepuisUrl) {
+        return;
+      }
+
+      setNumeroCommande(numeroDepuisUrl);
+      setError(null);
+      setLoading(true);
+
+      try {
+        const data = await commandeService.rechercher(numeroDepuisUrl);
+        setCommande(data);
+      } catch (err) {
+        setCommande(null);
+        setError(err.response?.data?.detail || 'Erreur lors de la recherche');
+      } finally {
+        setLoading(false);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [location.state, searchParams]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -19,6 +55,7 @@ export default function SearchOrder() {
     try {
       const data = await commandeService.rechercher(numeroCommande);
       setCommande(data);
+      setSearchParams({ numero: data.numero_commande || numeroCommande });
     } catch (err) {
       setError(err.response?.data?.detail || 'Erreur lors de la recherche');
     } finally {
@@ -28,7 +65,12 @@ export default function SearchOrder() {
 
   const handleReclamer = () => {
     // On passe les infos de la commande à la page de réclamation
-    navigate('/soumettre', { state: { commande } });
+    navigate('/soumettre', {
+      state: {
+        commande,
+        retourRecherche: `/rechercher?numero=${encodeURIComponent(commande.numero_commande)}`
+      }
+    });
   };
 
   const getStatusColor = (statut) => {
@@ -171,7 +213,7 @@ export default function SearchOrder() {
               <p className="amount">{commande.montant_total.toFixed(2)} €</p>
             </div>
             <button onClick={handleReclamer} className="btn-warning btn-large">
-              🛠️ Faire une réclamation sur cette commande
+               Faire une réclamation sur cette commande
             </button>
           </div>
         </div>

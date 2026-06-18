@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Home, Search, Bell, BarChart3, Package } from 'lucide-react';
+import { Home, Search, Bell, BarChart3, Package, UserCheck } from 'lucide-react';
 
 export default function Navbar() {
   return (
@@ -13,6 +13,7 @@ export default function Navbar() {
         <Link to="/rechercher"><Search size={18} /> Rechercher</Link>
         <Link to="/suivi"><Bell size={18} /> Suivi</Link>
         <Link to="/dashboard"><BarChart3 size={18} /> Dashboard</Link>
+        <Link to="/agent"><UserCheck size={18} /> Agent</Link>
       </div>
     </nav>
   );

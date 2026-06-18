@@ -10,16 +10,18 @@ from typing import List
 from backend.app.database import get_db, engine, Base
 from backend.app.models import (
     Client, Commande, Reclamation, Notification, 
-    HistoriqueStatut, Service, Agent
+    HistoriqueStatut, Service, Agent, AffectationReclamation
 )
 from backend.app.schemas import (
     ReclamationCreate, ReclamationResponse, ReclamationDetail,
-    ClientResponse, NotificationResponse, DashboardStats
+    ClientResponse, NotificationResponse, DashboardStats,
+    ReclamationAffecteeAgentResponse
 )
 from backend.app.ai_client import (
     analyser_reclamation_ia, EQUIPE_TO_SERVICE, CATEGORIE_IA_TO_BDD
 )
 from backend.app.matching import matcher_commande, get_info_commande_pour_ia
+from backend.app.affectation import affecter_reclamation_automatiquement
 
 
 # Créer les tables si elles n'existent pas
@@ -180,6 +182,53 @@ def get_clients(db: Session = Depends(get_db)):
 
 
 # ============================================
+# AGENTS
+# ============================================
+
+@app.get("/agents/{id_agent}/reclamations", response_model=List[ReclamationAffecteeAgentResponse])
+def get_reclamations_agent(id_agent: int, db: Session = Depends(get_db)):
+    """Récupérer les réclamations affectées à un agent."""
+    agent = db.query(Agent).filter(Agent.id_agent == id_agent).first()
+
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent introuvable")
+
+    affectations = db.query(AffectationReclamation).filter(
+        AffectationReclamation.id_agent == id_agent
+    ).order_by(AffectationReclamation.date_affectation.desc()).all()
+
+    resultats = []
+    for affectation in affectations:
+        reclamation = affectation.reclamation
+        if not reclamation:
+            continue
+
+        client = reclamation.client
+        resultats.append({
+            "id_affectation": affectation.id_affectation,
+            "statut_affectation": affectation.statut_affectation,
+            "commentaire_affectation": affectation.commentaire,
+            "id_reclamation": reclamation.id_reclamation,
+            "description": reclamation.description,
+            "statut_reclamation": reclamation.statut_reclamation,
+            "classification_detectee": reclamation.classification_detectee,
+            "priorite_detectee": reclamation.priorite_detectee,
+            "score_confiance": float(reclamation.score_confiance),
+            "est_complexe": reclamation.est_complexe,
+            "service_destinataire": reclamation.service_destinataire,
+            "date_creation": reclamation.date_creation,
+            "client": {
+                "nom": client.nom,
+                "prenom": client.prenom,
+                "email": client.email,
+                "telephone": client.telephone
+            } if client else None
+        })
+
+    return resultats
+
+
+# ============================================
 # RÉCLAMATIONS (CŒUR DU SYSTÈME)
 # ============================================
 
@@ -250,6 +299,11 @@ async def creer_reclamation(
     db.add(nouvelle_reclamation)
     db.commit()
     db.refresh(nouvelle_reclamation)
+
+    resultat_affectation = affecter_reclamation_automatiquement(
+        db=db,
+        reclamation=nouvelle_reclamation
+    )
     
     # ===== ÉTAPE 5 : NOTIFICATION CLIENT =====
     message_notif = "Votre réclamation a bien été enregistrée et est en cours de traitement."
@@ -267,11 +321,23 @@ async def creer_reclamation(
     db.add(notification)
     
     # ===== ÉTAPE 6 : HISTORIQUE =====
+    commentaire_historique = (
+        f"Réclamation créée. IA: {resultat_ia['categorie']} "
+        f"({resultat_ia['confiance']*100:.1f}%). "
+        f"Affectation: {resultat_affectation['message']}"
+    )
+
+    if resultat_affectation["affecte"]:
+        commentaire_historique += (
+            f" à l'agent {resultat_affectation['nom_agent']} "
+            f"du service {resultat_affectation['service']}."
+        )
+
     historique = HistoriqueStatut(
         id_reclamation=nouvelle_reclamation.id_reclamation,
         ancien_statut=None,
         nouveau_statut=nouvelle_reclamation.statut_reclamation,
-        commentaire=f"Réclamation créée. IA: {resultat_ia['categorie']} ({resultat_ia['confiance']*100:.1f}%)"
+        commentaire=commentaire_historique
     )
     db.add(historique)
     

@@ -86,6 +86,7 @@ class Reclamation(Base):
 
     commande = relationship("Commande")
     client = relationship("Client")
+    affectations = relationship("AffectationReclamation", back_populates="reclamation")
 
 
 class Service(Base):
@@ -93,6 +94,8 @@ class Service(Base):
     id_service = Column(Integer, primary_key=True, index=True)
     nom_service = Column(String(100), nullable=False)
     description = Column(Text)
+
+    agents = relationship("Agent", back_populates="service")
 
 
 class Agent(Base):
@@ -105,7 +108,8 @@ class Agent(Base):
     role = Column(String(50), default="agent_service_client")
     disponible = Column(Boolean, default=True)
 
-    service = relationship("Service")
+    service = relationship("Service", back_populates="agents")
+    affectations = relationship("AffectationReclamation", back_populates="agent")
 
 
 class Notification(Base):
@@ -137,5 +141,5 @@ class AffectationReclamation(Base):
     statut_affectation = Column(String(50), default="affectee")
     commentaire = Column(Text)
 
-    reclamation = relationship("Reclamation")
-    agent = relationship("Agent")
+    reclamation = relationship("Reclamation", back_populates="affectations")
+    agent = relationship("Agent", back_populates="affectations")

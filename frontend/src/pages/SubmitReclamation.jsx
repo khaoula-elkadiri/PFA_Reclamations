@@ -7,6 +7,9 @@ export default function SubmitReclamation() {
   const location = useLocation();
   const navigate = useNavigate();
   const commandeRecue = location.state?.commande;
+  const retourRecherche = commandeRecue
+    ? (location.state?.retourRecherche || `/rechercher?numero=${encodeURIComponent(commandeRecue.numero_commande)}`)
+    : '/rechercher';
 
   const [formData, setFormData] = useState({
     nom: '',
@@ -109,7 +112,11 @@ export default function SubmitReclamation() {
 
   return (
     <div className="container">
-      <Link to="/rechercher" className="back-link">
+      <Link
+        to={retourRecherche}
+        state={commandeRecue ? { commande: commandeRecue } : undefined}
+        className="back-link"
+      >
         <ArrowLeft size={18} /> Retour à la recherche
       </Link>
 
@@ -207,7 +214,7 @@ export default function SubmitReclamation() {
         </div>
 
         <button type="submit" className="btn-primary btn-large" disabled={loading}>
-          {loading ? '⏳ Envoi en cours...' : '📤 Envoyer la réclamation'}
+          {loading ? '⏳ Envoi en cours...' : ' Envoyer la réclamation'}
         </button>
       </form>
     </div>
