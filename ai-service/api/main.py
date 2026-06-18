@@ -103,22 +103,14 @@ def analyser_reclamation(requete: RequeteAnalyse):
         texte_original = requete.texte_reclamation
         texte_clean = preprocesser_complet(texte_original)
         
-        if not texte_clean or len(texte_clean.split()) < 2:
-            # Texte vide après nettoyage = cas complexe automatique
-            return ReponseAnalyse(
-                categorie="indetermine",
-                priorite="moyenne",
-                confiance=0.0,
-                mots_cles=[],
-                cas_complexe=True,
-                raisons_complexite=["Texte trop court ou vide après nettoyage"],
-                equipe_suggeree="service_client",
-                score_priorite=0,
-                raisons_priorite=[],
-                probabilites={}
-            )
-        
-        # === ÉTAPE 2 : Classification ===
+        # === ÉTAPE 1.5 : Détection texte vide ===
+        # Si le texte est complètement vide après nettoyage, on ne peut rien faire
+        if not texte_clean:
+            texte_clean = texte_original[:200]  # Utiliser le texte brut comme fallback
+
+        texte_trop_court = len(texte_clean.split()) < 3
+
+        # === ÉTAPE 2 : Classification (toujours via le modèle) ===
         prediction = modele.predict([texte_clean])[0]
         probas = modele.predict_proba([texte_clean])[0]
         confiance = float(max(probas))
@@ -139,6 +131,9 @@ def analyser_reclamation(requete: RequeteAnalyse):
         
         # === ÉTAPE 4 : Détection cas complexe ===
         resultat_complexite = detecter_cas_complexe(texte_original, probas_dict)
+        if texte_trop_court:
+            resultat_complexite['cas_complexe'] = True
+            resultat_complexite['raisons'].insert(0, "Texte trop court — résultat incertain")
         
         # === ÉTAPE 5 : Extraction mots-clés ===
         mots_cles = extraire_mots_cles(texte_original, n=5)

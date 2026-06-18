@@ -9,7 +9,9 @@ CREATE TABLE client (
     email VARCHAR(150),
     est_prioritaire BOOLEAN DEFAULT FALSE,
     type_client ENUM('normal', 'vip', 'professionnel') DEFAULT 'normal',
-    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    mot_de_passe_hash VARCHAR(255) NULL,
+    est_inscrit BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE commande (
@@ -148,6 +150,10 @@ CREATE TABLE agent (
 
     disponible BOOLEAN DEFAULT TRUE,
 
+    mot_de_passe_hash VARCHAR(255) NULL,
+
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
     FOREIGN KEY (id_service) REFERENCES service(id_service)
 );
 
@@ -195,6 +201,16 @@ CREATE TABLE notification (
     FOREIGN KEY (id_client) REFERENCES client(id_client),
 
     FOREIGN KEY (id_reclamation) REFERENCES reclamation(id_reclamation)
+);
+
+CREATE TABLE reponse_reclamation (
+    id_reponse INT AUTO_INCREMENT PRIMARY KEY,
+    id_reclamation INT NOT NULL,
+    id_agent INT NOT NULL,
+    contenu TEXT NOT NULL,
+    date_envoi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_reclamation) REFERENCES reclamation(id_reclamation),
+    FOREIGN KEY (id_agent) REFERENCES agent(id_agent)
 );
 
 CREATE TABLE historique_statut (

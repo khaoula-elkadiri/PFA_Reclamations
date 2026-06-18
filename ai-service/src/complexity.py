@@ -3,8 +3,10 @@
 Module de détection des cas complexes.
 """
 
-SEUIL_CONFIANCE = 0.30
-SEUIL_LONGUEUR_MIN = 5
+# Avec le modèle calibré (LinearSVC + CalibratedClassifierCV), les probabilités
+# sont bien distribuées. Un résultat < 40% mérite une revue humaine.
+SEUIL_CONFIANCE = 0.40
+SEUIL_LONGUEUR_MIN = 4
 SEUIL_LONGUEUR_MAX = 500
 
 

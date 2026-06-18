@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime, date
 from decimal import Decimal
 
@@ -85,3 +85,48 @@ class DashboardStats(BaseModel):
     resolues: int
     par_categorie: dict
     par_priorite: dict
+
+
+# ===== AUTH =====
+
+class AgentLoginRequest(BaseModel):
+    email: str
+    mot_de_passe: str
+
+
+class ClientLoginRequest(BaseModel):
+    email: str
+    mot_de_passe: str
+
+
+class ClientRegisterRequest(BaseModel):
+    nom: str
+    prenom: str
+    telephone: str
+    email: str
+    mot_de_passe: str = Field(..., min_length=6)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user_type: str
+    user_info: dict
+
+
+# ===== RÉPONSES AGENTS =====
+
+class ReponseCreate(BaseModel):
+    contenu: str = Field(..., min_length=10)
+
+
+class ReponseOut(BaseModel):
+    id_reponse: int
+    id_reclamation: int
+    contenu: str
+    date_envoi: datetime
+    nom_agent: Optional[str] = None
+    prenom_agent: Optional[str] = None
+
+    class Config:
+        from_attributes = True

@@ -15,6 +15,8 @@ class Client(Base):
     est_prioritaire = Column(Boolean, default=False)
     type_client = Column(String(50), default="normal")
     date_creation = Column(DateTime(timezone=True), server_default=func.now())
+    mot_de_passe_hash = Column(String(255), nullable=True)
+    est_inscrit = Column(Boolean, default=False)
 
 
 class Article(Base):
@@ -86,6 +88,7 @@ class Reclamation(Base):
 
     commande = relationship("Commande")
     client = relationship("Client")
+    reponse = relationship("ReponseReclamation", back_populates="reclamation", uselist=False)
 
 
 class Service(Base):
@@ -104,8 +107,11 @@ class Agent(Base):
     email = Column(String(150), unique=True)
     role = Column(String(50), default="agent_service_client")
     disponible = Column(Boolean, default=True)
+    mot_de_passe_hash = Column(String(255), nullable=True)
+    date_creation = Column(DateTime(timezone=True), server_default=func.now())
 
     service = relationship("Service")
+    reponses = relationship("ReponseReclamation", back_populates="agent")
 
 
 class Notification(Base):
@@ -126,6 +132,18 @@ class HistoriqueStatut(Base):
     nouveau_statut = Column(String(100))
     commentaire = Column(Text)
     date_changement = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReponseReclamation(Base):
+    __tablename__ = "reponse_reclamation"
+    id_reponse = Column(Integer, primary_key=True, index=True)
+    id_reclamation = Column(Integer, ForeignKey("reclamation.id_reclamation"), nullable=False)
+    id_agent = Column(Integer, ForeignKey("agent.id_agent"), nullable=False)
+    contenu = Column(Text, nullable=False)
+    date_envoi = Column(DateTime(timezone=True), server_default=func.now())
+
+    reclamation = relationship("Reclamation", back_populates="reponse")
+    agent = relationship("Agent", back_populates="reponses")
 
 
 class AffectationReclamation(Base):

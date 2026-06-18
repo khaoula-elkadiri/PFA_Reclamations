@@ -1,7 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "mysql+pymysql://root:52365236@localhost/pfa_reclamations"
+# Mot de passe original: tabete/01 → encodé en URL: tabete%2F01
+DATABASE_URL = "mysql+pymysql://root:tabete%2F01@localhost:3306/pfa_reclamations"
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
