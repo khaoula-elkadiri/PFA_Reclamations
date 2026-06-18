@@ -30,31 +30,31 @@ async def analyser_reclamation_ia(
             return response.json()
     
     except httpx.ConnectError:
-        # Si l'API IA n'est pas accessible, retour par défaut
+        # Si l'API IA n'est pas accessible → routing manuel vers Service Client
         return {
-            "categorie": "autre",
+            "categorie": "retard_livraison",
             "priorite": "moyenne",
             "confiance": 0.0,
             "mots_cles": [],
             "cas_complexe": True,
-            "raisons_complexite": ["API IA non accessible"],
+            "raisons_complexite": ["Service IA indisponible — traitement manuel requis"],
             "equipe_suggeree": "service_client",
-            "score_priorite": 0,
-            "raisons_priorite": [],
+            "score_priorite": 3,
+            "raisons_priorite": ["Classification IA non disponible"],
             "probabilites": {}
         }
     except Exception as e:
         print(f"Erreur IA : {e}")
         return {
-            "categorie": "autre",
+            "categorie": "retard_livraison",
             "priorite": "moyenne",
             "confiance": 0.0,
             "mots_cles": [],
             "cas_complexe": True,
-            "raisons_complexite": [f"Erreur: {str(e)}"],
+            "raisons_complexite": [f"Erreur IA: traitement manuel requis"],
             "equipe_suggeree": "service_client",
-            "score_priorite": 0,
-            "raisons_priorite": [],
+            "score_priorite": 3,
+            "raisons_priorite": ["Classification IA non disponible"],
             "probabilites": {}
         }
 

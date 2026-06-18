@@ -1,6 +1,10 @@
 """
 Application Backend principal - PFA Réclamations Logistiques.
 """
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -22,6 +26,9 @@ from backend.app.ai_client import (
 )
 from backend.app.matching import matcher_commande, get_info_commande_pour_ia
 from backend.app.affectation import affecter_reclamation_automatiquement
+from backend.app.auth import get_current_agent, get_current_client
+from backend.app.routers.auth_router import router as auth_router
+from backend.app.routers.reponses_router import router as reponses_router
 
 
 # Créer les tables si elles n'existent pas
@@ -40,6 +47,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router)
+app.include_router(reponses_router)
 
 
 # ============================================
@@ -369,12 +379,39 @@ def get_reclamation(id_reclamation: int, db: Session = Depends(get_db)):
     return rec
 
 
+@app.get("/client/mes-reclamations")
+def get_mes_reclamations(
+    db: Session = Depends(get_db),
+    current_client: Client = Depends(get_current_client),
+):
+    """Toutes les réclamations du client connecté avec leur réponse si disponible."""
+    reclamations = db.query(Reclamation).filter(
+        Reclamation.id_client == current_client.id_client
+    ).order_by(Reclamation.date_creation.desc()).all()
+
+    result = []
+    for rec in reclamations:
+        item = {
+            "id_reclamation": rec.id_reclamation,
+            "description": rec.description,
+            "statut_reclamation": rec.statut_reclamation,
+            "classification_detectee": rec.classification_detectee,
+            "priorite_detectee": rec.priorite_detectee,
+            "service_destinataire": rec.service_destinataire,
+            "date_creation": rec.date_creation,
+            "a_reponse": rec.reponse is not None,
+        }
+        result.append(item)
+    return result
+
+
 @app.get("/reclamations", response_model=List[ReclamationDetail])
 def get_all_reclamations(
     statut: str = None,
     service: str = None,
     priorite: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent),
 ):
     """Liste toutes les réclamations avec filtres optionnels."""
     query = db.query(Reclamation)
@@ -393,7 +430,8 @@ def get_all_reclamations(
 def update_statut_reclamation(
     id_reclamation: int,
     nouveau_statut: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent),
 ):
     """Mettre à jour le statut d'une réclamation."""
     rec = db.query(Reclamation).filter(
@@ -446,7 +484,10 @@ def get_notifications_client(id_client: int, db: Session = Depends(get_db)):
 # ============================================
 
 @app.get("/dashboard/stats", response_model=DashboardStats)
-def get_dashboard_stats(db: Session = Depends(get_db)):
+def get_dashboard_stats(
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent),
+):
     """Statistiques globales pour le dashboard."""
     total = db.query(Reclamation).count()
     en_attente = db.query(Reclamation).filter(
@@ -481,7 +522,11 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
 
 
 @app.get("/dashboard/service/{nom_service}")
-def get_reclamations_service(nom_service: str, db: Session = Depends(get_db)):
+def get_reclamations_service(
+    nom_service: str,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent),
+):
     """Réclamations affectées à un service spécifique."""
     return db.query(Reclamation).filter(
         Reclamation.service_destinataire == nom_service
