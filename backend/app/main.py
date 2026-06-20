@@ -8,7 +8,7 @@ load_dotenv()
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from typing import List
 
 from backend.app.database import get_db, engine, Base
@@ -21,14 +21,19 @@ from backend.app.schemas import (
     ClientResponse, NotificationResponse, DashboardStats,
     ReclamationAffecteeAgentResponse
 )
+from pydantic import BaseModel, Field as PydanticField
+
+class ReclamationClientUpdate(BaseModel):
+    description: str = PydanticField(..., min_length=10)
 from backend.app.ai_client import (
     analyser_reclamation_ia, EQUIPE_TO_SERVICE, CATEGORIE_IA_TO_BDD
 )
 from backend.app.matching import matcher_commande, get_info_commande_pour_ia
 from backend.app.affectation import affecter_reclamation_automatiquement
-from backend.app.auth import get_current_agent, get_current_client
+from backend.app.auth import get_current_agent, get_current_client, get_optional_client
 from backend.app.routers.auth_router import router as auth_router
 from backend.app.routers.reponses_router import router as reponses_router
+from backend.app.routers.admin_router import router as admin_router
 
 
 # Créer les tables si elles n'existent pas
@@ -50,6 +55,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(reponses_router)
+app.include_router(admin_router)
 
 
 # ============================================
@@ -214,6 +220,7 @@ def get_reclamations_agent(id_agent: int, db: Session = Depends(get_db)):
             continue
 
         client = reclamation.client
+        reponse = reclamation.reponse
         resultats.append({
             "id_affectation": affectation.id_affectation,
             "statut_affectation": affectation.statut_affectation,
@@ -227,6 +234,13 @@ def get_reclamations_agent(id_agent: int, db: Session = Depends(get_db)):
             "est_complexe": reclamation.est_complexe,
             "service_destinataire": reclamation.service_destinataire,
             "date_creation": reclamation.date_creation,
+            "numero_commande": reclamation.commande.numero_commande if reclamation.commande else None,
+            "reponse": {
+                "contenu": reponse.contenu,
+                "date_envoi": reponse.date_envoi,
+                "nom_agent": reponse.agent.nom if reponse.agent else None,
+                "prenom_agent": reponse.agent.prenom if reponse.agent else None,
+            } if reponse else None,
             "client": {
                 "nom": client.nom,
                 "prenom": client.prenom,
@@ -245,7 +259,8 @@ def get_reclamations_agent(id_agent: int, db: Session = Depends(get_db)):
 @app.post("/reclamation", response_model=ReclamationResponse)
 async def creer_reclamation(
     reclamation: ReclamationCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    client_connecte=Depends(get_optional_client),
 ):
     """
     🎯 ENDPOINT PRINCIPAL : Création d'une réclamation.
@@ -275,7 +290,8 @@ async def creer_reclamation(
         )
     
     id_commande = matching["id_commande"]
-    id_client = matching["id_client"]
+    # Si le client est connecté, ses réclamations lui appartiennent directement
+    id_client = client_connecte.id_client if client_connecte else matching["id_client"]
     
     # ===== ÉTAPE 2 : APPEL À L'API IA =====
     info_commande = get_info_commande_pour_ia(db, id_commande)
@@ -379,15 +395,105 @@ def get_reclamation(id_reclamation: int, db: Session = Depends(get_db)):
     return rec
 
 
+@app.get("/client/mes-commandes")
+def get_mes_commandes(
+    db: Session = Depends(get_db),
+    current_client: Client = Depends(get_current_client),
+):
+    """Toutes les commandes du client connecté, trouvées par email ou téléphone."""
+    conditions = []
+    if current_client.email:
+        conditions.append(Client.email == current_client.email)
+    if current_client.telephone:
+        conditions.append(Client.telephone == current_client.telephone)
+
+    if not conditions:
+        return []
+
+    commandes = (
+        db.query(Commande)
+        .join(Client, Commande.id_client == Client.id_client)
+        .filter(or_(*conditions))
+        .order_by(Commande.date_commande.desc())
+        .all()
+    )
+
+    result = []
+    for cmd in commandes:
+        articles = []
+        for ligne in cmd.lignes:
+            if ligne.article:
+                articles.append({
+                    "nom_article": ligne.article.nom_article,
+                    "categorie": ligne.article.categorie_article,
+                    "quantite": ligne.quantite,
+                    "est_perissable": ligne.article.est_perissable,
+                    "est_fragile": ligne.article.est_fragile,
+                })
+
+        livraison = None
+        if cmd.livraisons:
+            liv = cmd.livraisons[0]
+            livraison = {
+                "numero_suivi": liv.numero_suivi,
+                "statut_livraison": liv.statut_livraison,
+                "transporteur": liv.transporteur,
+                "date_livraison_prevue": str(liv.date_livraison_prevue) if liv.date_livraison_prevue else None,
+                "date_livraison_reelle": str(liv.date_livraison_reelle) if liv.date_livraison_reelle else None,
+            }
+
+        client_cmd = db.query(Client).filter(Client.id_client == cmd.id_client).first()
+        result.append({
+            "id_commande": cmd.id_commande,
+            "numero_commande": cmd.numero_commande,
+            "date_commande": str(cmd.date_commande),
+            "statut_commande": cmd.statut_commande,
+            "montant_total": float(cmd.montant_total),
+            "articles": articles,
+            "livraison": livraison,
+            "client": {
+                "nom": client_cmd.nom,
+                "prenom": client_cmd.prenom,
+                "telephone": client_cmd.telephone,
+                "email": client_cmd.email,
+            } if client_cmd else None,
+        })
+
+    return result
+
+
 @app.get("/client/mes-reclamations")
 def get_mes_reclamations(
     db: Session = Depends(get_db),
     current_client: Client = Depends(get_current_client),
 ):
     """Toutes les réclamations du client connecté avec leur réponse si disponible."""
-    reclamations = db.query(Reclamation).filter(
-        Reclamation.id_client == current_client.id_client
-    ).order_by(Reclamation.date_creation.desc()).all()
+    # Stratégie double pour couvrir les réclamations soumises avant inscription :
+    # 1. id_client direct (réclamations créées après login)
+    # 2. Via commande : toutes les commandes appartenant à un client avec même email/téléphone
+    conditions_identite = []
+    if current_client.email:
+        conditions_identite.append(Client.email == current_client.email)
+    if current_client.telephone:
+        conditions_identite.append(Client.telephone == current_client.telephone)
+
+    if conditions_identite:
+        commandes_liees = (
+            db.query(Commande.id_commande)
+            .join(Client, Commande.id_client == Client.id_client)
+            .filter(or_(*conditions_identite))
+            .subquery()
+        )
+        reclamations = db.query(Reclamation).filter(
+            or_(
+                Reclamation.id_client == current_client.id_client,
+                Reclamation.id_commande.in_(commandes_liees),
+            )
+        ).order_by(Reclamation.date_creation.desc()).all()
+    else:
+        reclamations = db.query(Reclamation).filter(
+            Reclamation.id_client == current_client.id_client
+        ).order_by(Reclamation.date_creation.desc()).all()
 
     result = []
     for rec in reclamations:
@@ -403,6 +509,53 @@ def get_mes_reclamations(
         }
         result.append(item)
     return result
+
+
+def _check_client_owns_reclamation(rec, current_client, db):
+    """Vérifie que la réclamation appartient au client connecté."""
+    if rec.id_client == current_client.id_client:
+        return True
+    cmd = db.query(Commande).filter(Commande.id_commande == rec.id_commande).first()
+    return cmd and cmd.id_client == current_client.id_client
+
+
+@app.put("/client/reclamation/{id_reclamation}")
+def update_reclamation_client(
+    id_reclamation: int,
+    data: ReclamationClientUpdate,
+    db: Session = Depends(get_db),
+    current_client: Client = Depends(get_current_client),
+):
+    """Le client modifie la description de sa réclamation (uniquement si en_attente ou en_analyse)."""
+    rec = db.query(Reclamation).filter(Reclamation.id_reclamation == id_reclamation).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Réclamation introuvable")
+    if not _check_client_owns_reclamation(rec, current_client, db):
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    if rec.statut_reclamation not in ("en_attente", "en_analyse"):
+        raise HTTPException(status_code=400, detail="Modification impossible : la réclamation a déjà été prise en charge par un agent.")
+    rec.description = data.description
+    db.commit()
+    return {"message": "Réclamation mise à jour avec succès"}
+
+
+@app.delete("/client/reclamation/{id_reclamation}")
+def delete_reclamation_client(
+    id_reclamation: int,
+    db: Session = Depends(get_db),
+    current_client: Client = Depends(get_current_client),
+):
+    """Le client supprime sa réclamation (uniquement si en_attente ou en_analyse)."""
+    rec = db.query(Reclamation).filter(Reclamation.id_reclamation == id_reclamation).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Réclamation introuvable")
+    if not _check_client_owns_reclamation(rec, current_client, db):
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    if rec.statut_reclamation not in ("en_attente", "en_analyse"):
+        raise HTTPException(status_code=400, detail="Suppression impossible : la réclamation a déjà été prise en charge par un agent.")
+    db.delete(rec)
+    db.commit()
+    return {"message": "Réclamation supprimée avec succès"}
 
 
 @app.get("/reclamations", response_model=List[ReclamationDetail])
@@ -531,3 +684,42 @@ def get_reclamations_service(
     return db.query(Reclamation).filter(
         Reclamation.service_destinataire == nom_service
     ).order_by(Reclamation.priorite_detectee.desc()).all()
+
+
+@app.get("/dashboard/ai-stats")
+def get_ai_stats(
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent),
+):
+    """Statistiques IA : confiance moyenne et cas complexes par catégorie."""
+    total = db.query(Reclamation).count()
+    nb_complexes = db.query(Reclamation).filter(Reclamation.est_complexe == True).count()
+
+    stats_par_cat = db.query(
+        Reclamation.classification_detectee,
+        func.count(Reclamation.id_reclamation).label("total"),
+        func.avg(Reclamation.score_confiance).label("confiance_moy"),
+    ).group_by(Reclamation.classification_detectee).all()
+
+    par_service = db.query(
+        Reclamation.service_destinataire,
+        func.count(Reclamation.id_reclamation).label("total"),
+    ).group_by(Reclamation.service_destinataire).all()
+
+    return {
+        "total": total,
+        "nb_complexes": nb_complexes,
+        "pct_complexes": round(nb_complexes / total * 100, 1) if total else 0,
+        "par_categorie": [
+            {
+                "categorie": r[0] or "non_classe",
+                "total": r[1],
+                "confiance_moy": round(float(r[2] or 0), 1),
+            }
+            for r in stats_par_cat
+        ],
+        "par_service": [
+            {"service": r[0] or "Non assigné", "total": r[1]}
+            for r in par_service
+        ],
+    }

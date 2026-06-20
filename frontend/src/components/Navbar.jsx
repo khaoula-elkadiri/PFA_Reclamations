@@ -1,9 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Bell, BarChart3, Package, User, LogOut, FileText, UserCheck } from 'lucide-react';
+import { Search, Bell, Package, User, LogOut, FileText, UserCheck, TrendingUp, LayoutDashboard, Users, Brain, ShoppingBag, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
-  const { agentUser, clientUser, isAgentLoggedIn, isClientLoggedIn, logoutAgent, logoutClient } = useAuth();
+  const { agentUser, clientUser, isAgentLoggedIn, isClientLoggedIn, isAdminLoggedIn, logoutAgent, logoutClient } = useAuth();
   const navigate = useNavigate();
 
   const handleLogoutAgent = () => {
@@ -24,14 +24,39 @@ export default function Navbar() {
       </Link>
 
       <div className="navbar-links">
+        {isAdminLoggedIn() && (
+          <>
+            <Link to="/admin/dashboard">
+              <LayoutDashboard size={18} /> Dashboard
+            </Link>
+            <Link to="/admin/agents">
+              <Users size={18} /> Agents
+            </Link>
+            <Link to="/admin/ia">
+              <Brain size={18} /> Monitoring IA
+            </Link>
+            <Link to="/admin/clients">
+              <ShoppingBag size={18} /> Clients
+            </Link>
+            <span className="navbar-user">
+              <User size={16} />
+              {agentUser?.prenom} {agentUser?.nom}
+              <span className="navbar-role">Admin</span>
+            </span>
+            <button className="navbar-logout" onClick={handleLogoutAgent} title="Se déconnecter">
+              <LogOut size={16} /> Déconnexion
+            </button>
+          </>
+        )}
+
         {isAgentLoggedIn() && (
           <>
             <Link to="/agent">
-              <UserCheck size={18} /> Agent
+              <UserCheck size={18} /> Mes réclamations
             </Link>
 
-            <Link to={`/service/${agentUser?.service}`}>
-              <BarChart3 size={18} /> {agentUser?.service}
+            <Link to="/analytics">
+              <TrendingUp size={18} /> Analytiques
             </Link>
 
             <span className="navbar-user">
@@ -48,8 +73,8 @@ export default function Navbar() {
 
         {isClientLoggedIn() && (
           <>
-            <Link to="/rechercher">
-              <Search size={18} /> Nouvelle réclamation
+            <Link to="/mes-commandes">
+              <Search size={18} /> Mes commandes
             </Link>
 
             <Link to="/suivi">

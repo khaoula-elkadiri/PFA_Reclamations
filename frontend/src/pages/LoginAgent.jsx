@@ -17,7 +17,11 @@ export default function LoginAgent() {
     try {
       const data = await authService.loginAgent(form.email, form.mot_de_passe);
       loginAgent(data.access_token, data.user_info);
-      navigate(`/service/${data.user_info.service}`);
+      if (data.user_info.role === 'administrateur') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/agent');
+      }
     } catch (err) {
       setError(err.response?.data?.detail || 'Email ou mot de passe incorrect');
     } finally {

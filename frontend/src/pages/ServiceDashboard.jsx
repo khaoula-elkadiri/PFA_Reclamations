@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { dashboardService, reclamationService, reponseService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Send, CheckCircle } from 'lucide-react';
+import { Send, CheckCircle, Brain } from 'lucide-react';
+
+const LABEL_CATEGORIES = {
+  retard_livraison: 'Retard livraison',
+  produit_casse: 'Produit cassé',
+  erreur_picking: 'Erreur picking',
+  article_manquant: 'Article manquant',
+  mauvaise_qualite: 'Mauvaise qualité',
+  probleme_transport: 'Prob. transport',
+  erreur_administrative: 'Erreur admin.',
+};
 
 function ReponsePanel({ idReclamation }) {
   const [reponse, setReponse] = useState(undefined); // undefined = chargement
@@ -143,10 +153,40 @@ export default function ServiceDashboard() {
           <div key={rec.id_reclamation} className="reclamation-card">
             <div className="card-header">
               <h3>Réclamation #{rec.id_reclamation}</h3>
-              <span style={prioriteBadge(rec.priorite_detectee)}>{rec.priorite_detectee}</span>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={prioriteBadge(rec.priorite_detectee)}>{rec.priorite_detectee}</span>
+                {rec.est_complexe && (
+                  <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
+                    ⚠ Complexe
+                  </span>
+                )}
+              </div>
             </div>
-            <p><strong>Catégorie :</strong> {rec.classification_detectee}</p>
-            <p><strong>Statut :</strong> <span className={`status status-${rec.statut_reclamation}`}>{rec.statut_reclamation}</span></p>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', margin: '8px 0' }}>
+              <p style={{ margin: 0 }}>
+                <strong>Catégorie :</strong> {LABEL_CATEGORIES[rec.classification_detectee] || rec.classification_detectee}
+              </p>
+              <p style={{ margin: 0 }}>
+                <strong>Statut :</strong> <span className={`status status-${rec.statut_reclamation}`}>{rec.statut_reclamation}</span>
+              </p>
+            </div>
+            {/* Badge confiance IA */}
+            {rec.score_confiance != null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '6px 0' }}>
+                <Brain size={14} color="#667eea" />
+                <span style={{ fontSize: 13, color: '#6b7280' }}>Confiance IA :</span>
+                <div style={{ background: '#e5e7eb', borderRadius: 4, height: 8, width: 80 }}>
+                  <div style={{
+                    background: Number(rec.score_confiance) >= 70 ? '#48bb78' : Number(rec.score_confiance) >= 40 ? '#f6ad55' : '#fc8181',
+                    borderRadius: 4, height: '100%',
+                    width: `${Math.min(Number(rec.score_confiance), 100)}%`,
+                  }} />
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                  {Number(rec.score_confiance).toFixed(1)}%
+                </span>
+              </div>
+            )}
             <div className="description-box" style={{ marginTop: '10px' }}>
               <p>{rec.description}</p>
             </div>

@@ -75,12 +75,6 @@ export default function TrackReclamation() {
               <span>{reclamation.classification_detectee}</span>
             </div>
             <div className="detail-item">
-              <label>Priorité</label>
-              <span className={`badge badge-${reclamation.priorite_detectee}`}>
-                {reclamation.priorite_detectee}
-              </span>
-            </div>
-            <div className="detail-item">
               <label>Service en charge</label>
               <span>{reclamation.service_destinataire}</span>
             </div>

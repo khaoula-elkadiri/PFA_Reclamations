@@ -45,8 +45,6 @@ def get_reponse_client(
     rec = db.query(Reclamation).filter(Reclamation.id_reclamation == id_reclamation).first()
     if not rec:
         raise HTTPException(status_code=404, detail="Réclamation introuvable")
-    if rec.id_client != current_client.id_client:
-        raise HTTPException(status_code=403, detail="Accès interdit")
 
     reponse = db.query(ReponseReclamation).filter(
         ReponseReclamation.id_reclamation == id_reclamation

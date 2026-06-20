@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProtectedRoute({ type, children }) {
-  const { loading, isAgentLoggedIn, isClientLoggedIn } = useAuth();
+  const { loading, isAgentLoggedIn, isClientLoggedIn, isAdminLoggedIn } = useAuth();
 
   if (loading) {
     return (
@@ -12,6 +12,9 @@ export default function ProtectedRoute({ type, children }) {
     );
   }
 
+  if (type === 'admin' && !isAdminLoggedIn()) {
+    return <Navigate to="/login/agent" replace />;
+  }
   if (type === 'agent' && !isAgentLoggedIn()) {
     return <Navigate to="/login/agent" replace />;
   }

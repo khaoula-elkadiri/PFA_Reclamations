@@ -78,6 +78,23 @@ def get_current_client(
     return client
 
 
+def get_current_admin(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> Agent:
+    payload = _decode_token(credentials)
+    if not payload or payload.get("type") != "agent":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentification administrateur requise",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    agent = db.query(Agent).filter(Agent.id_agent == int(payload["sub"])).first()
+    if not agent or agent.role != "administrateur":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès administrateur requis")
+    return agent
+
+
 def get_optional_client(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     db: Session = Depends(get_db),

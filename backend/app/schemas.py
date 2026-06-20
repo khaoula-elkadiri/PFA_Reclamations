@@ -68,6 +68,13 @@ class ReclamationDetail(BaseModel):
         from_attributes = True
 
 
+class ReponseInfo(BaseModel):
+    contenu: str
+    date_envoi: datetime
+    nom_agent: Optional[str] = None
+    prenom_agent: Optional[str] = None
+
+
 class ReclamationAffecteeAgentResponse(BaseModel):
     id_affectation: int
     statut_affectation: str
@@ -82,6 +89,8 @@ class ReclamationAffecteeAgentResponse(BaseModel):
     service_destinataire: Optional[str]
     date_creation: datetime
     client: Optional[ClientInfo]
+    numero_commande: Optional[str] = None
+    reponse: Optional[ReponseInfo] = None
 
 
 class NotificationResponse(BaseModel):

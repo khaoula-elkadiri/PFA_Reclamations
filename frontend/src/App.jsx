@@ -7,9 +7,13 @@ import HomePage from './pages/HomePage';
 import SearchOrder from './pages/SearchOrder';
 import SubmitReclamation from './pages/SubmitReclamation';
 import TrackReclamation from './pages/TrackReclamation';
-import Dashboard from './pages/Dashboard';
-import ServiceDashboard from './pages/ServiceDashboard';
 import AgentReclamations from './pages/AgentReclamations';
+import Analytics from './pages/Analytics';
+import MesCommandes from './pages/MesCommandes';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminAgents from './pages/AdminAgents';
+import AdminMonitoringIA from './pages/AdminMonitoringIA';
+import AdminClients from './pages/AdminClients';
 
 import EspaceClient from './pages/EspaceClient';
 import LoginAgent from './pages/LoginAgent';
@@ -51,6 +55,15 @@ function App() {
           />
 
           <Route
+            path="/mes-commandes"
+            element={
+              <ProtectedRoute type="client">
+                <MesCommandes />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/rechercher"
             element={
               <ProtectedRoute type="client">
@@ -78,15 +91,6 @@ function App() {
           />
 
           <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute type="agent">
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
             path="/agent"
             element={
               <ProtectedRoute type="agent">
@@ -96,10 +100,44 @@ function App() {
           />
 
           <Route
-            path="/service/:nomService"
+            path="/analytics"
             element={
               <ProtectedRoute type="agent">
-                <ServiceDashboard />
+                <Analytics />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Routes administrateur */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute type="admin">
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/agents"
+            element={
+              <ProtectedRoute type="admin">
+                <AdminAgents />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/ia"
+            element={
+              <ProtectedRoute type="admin">
+                <AdminMonitoringIA />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/clients"
+            element={
+              <ProtectedRoute type="admin">
+                <AdminClients />
               </ProtectedRoute>
             }
           />

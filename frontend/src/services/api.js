@@ -14,12 +14,14 @@ api.interceptors.request.use((config) => {
 
   const url = config.url || '';
   const agentRoutes = ['/dashboard', '/reclamations', '/reponse', '/statut', '/auth/me', '/agents'];
-  const clientRoutes = ['/mes-reclamations', '/auth/me/client', '/client/mes-reclamations'];
+  const adminRoutes = ['/admin/'];
+  const clientRoutes = ['/mes-reclamations', '/auth/me/client', '/client/mes-reclamations', '/client/mes-commandes', '/client/reclamation', '/reclamation'];
 
   const isAgentRoute = agentRoutes.some(r => url.includes(r));
+  const isAdminRoute = adminRoutes.some(r => url.includes(r));
   const isClientRoute = clientRoutes.some(r => url.includes(r));
 
-  if (isAgentRoute && agentToken && !config.headers.Authorization) {
+  if ((isAgentRoute || isAdminRoute) && agentToken && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${agentToken}`;
   } else if (isClientRoute && clientToken && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${clientToken}`;
@@ -74,7 +76,15 @@ export const agentService = {
   getReclamations: async (idAgent) => {
     const response = await api.get(`/agents/${idAgent}/reclamations`);
     return response.data;
-  }
+  },
+  updateStatut: async (idReclamation, nouveauStatut) => {
+    const response = await api.put(`/reclamation/${idReclamation}/statut?nouveau_statut=${nouveauStatut}`);
+    return response.data;
+  },
+  creerReponse: async (idReclamation, contenu) => {
+    const response = await api.post(`/reponse/reclamation/${idReclamation}`, { contenu });
+    return response.data;
+  },
 };
 
 export const commandeService = {
@@ -146,7 +156,59 @@ export const clientService = {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     return response.data;
-  }
+  },
+
+  getMesCommandes: async () => {
+    const token = localStorage.getItem('client_token');
+    const response = await api.get('/client/mes-commandes', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return response.data;
+  },
+
+  updateReclamation: async (id, description) => {
+    const token = localStorage.getItem('client_token');
+    const response = await api.put(`/client/reclamation/${id}`, { description }, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return response.data;
+  },
+
+  deleteReclamation: async (id) => {
+    const token = localStorage.getItem('client_token');
+    const response = await api.delete(`/client/reclamation/${id}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return response.data;
+  },
+};
+
+export const adminService = {
+  // Dashboard
+  getDashboard: () => api.get('/admin/dashboard').then(r => r.data),
+  // Agents
+  getAgents: () => api.get('/admin/agents').then(r => r.data),
+  getServices: () => api.get('/admin/services').then(r => r.data),
+  createAgent: (data) => api.post('/admin/agents', data).then(r => r.data),
+  updateAgent: (id, data) => api.put(`/admin/agents/${id}`, data).then(r => r.data),
+  deactivateAgent: (id) => api.delete(`/admin/agents/${id}`).then(r => r.data),
+  // Réclamations
+  getReclamations: (filters = {}) => {
+    const p = new URLSearchParams(filters);
+    return api.get(`/admin/reclamations?${p}`).then(r => r.data);
+  },
+  reassigner: (id, data) => api.put(`/admin/reclamations/${id}/reassigner`, data).then(r => r.data),
+  // Monitoring IA
+  getMonitoringIA: () => api.get('/admin/ia/monitoring').then(r => r.data),
+  // Clients
+  getClients: () => api.get('/admin/clients').then(r => r.data),
+  getClientDetail: (id) => api.get(`/admin/clients/${id}`).then(r => r.data),
+  createClient: (data) => api.post('/admin/clients', data).then(r => r.data),
+  updateClient: (id, data) => api.put(`/admin/clients/${id}`, data).then(r => r.data),
+  deleteClient: (id) => api.delete(`/admin/clients/${id}`).then(r => r.data),
+  updateCommandeStatut: (id, nouveau_statut) => api.put(`/admin/commandes/${id}/statut`, { nouveau_statut }).then(r => r.data),
+  getArticles: () => api.get('/admin/articles').then(r => r.data),
+  createCommande: (data) => api.post('/admin/commandes', data).then(r => r.data),
 };
 
 export default api;

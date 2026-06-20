@@ -59,8 +59,9 @@ export function AuthProvider({ children }) {
     setClientUser(null);
   };
 
-  const isAgentLoggedIn = () => !!agentToken && !!agentUser;
+  const isAgentLoggedIn = () => !!agentToken && !!agentUser && agentUser?.role !== 'administrateur';
   const isClientLoggedIn = () => !!clientToken && !!clientUser;
+  const isAdminLoggedIn = () => !!agentToken && !!agentUser && agentUser?.role === 'administrateur';
 
   return (
     <AuthContext.Provider value={{
@@ -69,7 +70,7 @@ export function AuthProvider({ children }) {
       loading,
       loginAgent, loginClient,
       logoutAgent, logoutClient,
-      isAgentLoggedIn, isClientLoggedIn,
+      isAgentLoggedIn, isClientLoggedIn, isAdminLoggedIn,
     }}>
       {children}
     </AuthContext.Provider>
